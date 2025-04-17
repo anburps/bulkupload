@@ -1,7 +1,8 @@
-from django import from .forms import 
-from .models import *
+# forms.py
+from django import forms
+from .models import UploadeFile
 
-class BulkUploadForm(forms.MOdelForm):
+class UploadFileForm(forms.ModelForm):
     class Meta:
-        model = BulkUpload
-        fields = "__all__"
+        model = UploadeFile
+        fields = ['name', 'file']

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chunk Upload</title>
+</head>
+<body>
+<h2>Chunk File Upload</h2>
+<input type="file" id="fileInput">
+<button onclick="uploadFile()">Upload</button>
+<p id="status"></p>
+
+<script>
+function uploadFile() {
+    const file = document.getElementById('fileInput').files[0];
+    const chunkSize = 1024 * 1024; // 1MB
+    const totalChunks = Math.ceil(file.size / chunkSize);
+
+    let currentChunk = 0;
+    console.log("currentChunk",currentChunk)
+    function sendChunk() {
+        const start = currentChunk * chunkSize;
+        const end = Math.min(file.size, start + chunkSize);
+        const chunk = file.slice(start, end);
+
+        const formData = new FormData();
+        formData.append('file', chunk);
+        formData.append('filename', file.name);
+        formData.append('chunkIndex', currentChunk);
+        formData.append('totalChunks', totalChunks);
+
+        fetch('/upload/', {
+            method: 'POST',
+            body: formData
+        }).then(res => res.json()).then(data => {
+            document.getElementById('status').textContent = `Uploading chunk ${currentChunk + 1}/${totalChunks}`;
+            currentChunk++;
+            if (currentChunk < totalChunks) {
+                sendChunk();
+            } else {
+                document.getElementById('status').textContent = "Upload complete!";
+            }
+        }).catch(err => {
+            console.error("Upload failed:", err);
+        });
+    }
+
+    sendChunk();
+}
+</script>
+</body>
+</html>
