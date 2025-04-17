@@ -1,14 +1,96 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Normal File Upload</title>
+    <title>Chunk File Upload</title>
+    <style>
+        #progressContainer {
+            width: 100%;
+            background-color: #eee;
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+        #progressBar {
+            height: 20px;
+            width: 0%;
+            background-color: #4caf50;
+            text-align: center;
+            line-height: 20px;
+            color: white;
+            border-radius: 10px;
+        }
+    </style>
 </head>
 <body>
-    <h1>Upload File</h1>
-    <form method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Upload</button>
-    </form>
+    <h1>Upload File in Chunks</h1>
+    <input type="file" id="fileInput">
+    <button onclick="uploadFile()">Upload</button>
+    <p id="status"></p>
+
+    <div id="progressContainer">
+        <div id="progressBar">0%</div>
+    </div>
+
+    <script>
+        function uploadFile() {
+            const file = document.getElementById('fileInput').files[0];
+        
+            if (!file) {
+                alert("Please select a file");
+                return;
+            }
+        
+            const totalChunks = 100;
+            const chunkSize = Math.ceil(file.size / totalChunks);
+            let currentChunk = 0;
+        
+            const progressBar = document.getElementById('progressBar');
+            const statusText = document.getElementById('status');
+        
+            function updateProgressBar() {
+                const percent = Math.round((currentChunk / totalChunks) * 100);
+                progressBar.style.width = percent + '%';
+                progressBar.textContent = percent + '%';
+            }
+        
+            function sendChunk() {
+                const start = currentChunk * chunkSize;
+                const end = Math.min(file.size, start + chunkSize);
+                const chunk = file.slice(start, end);
+        
+                const formData = new FormData();
+                formData.append('file', chunk);
+                formData.append('filename', file.name);
+                formData.append('chunkIndex', currentChunk);
+                formData.append('totalChunks', totalChunks);
+        
+                fetch('/home/', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    currentChunk++;
+                    updateProgressBar();
+                    statusText.textContent = `Uploaded chunk ${currentChunk}/${totalChunks}`;
+        
+                    if (currentChunk < totalChunks) {
+                        sendChunk();
+                    } else {
+                        statusText.textContent = "✅ Upload complete!";
+                        if (data.redirect_url) {
+                            window.location.href = data.redirect_url;
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error("Upload failed:", error);
+                    statusText.textContent = "❌ Upload failed.";
+                });
+            }
+        
+            updateProgressBar();
+            sendChunk();
+        }
+    </script>
 </body>
 </html>
